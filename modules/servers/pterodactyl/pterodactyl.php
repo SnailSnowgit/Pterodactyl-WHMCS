@@ -1,33 +1,8 @@
 <?php
 /**
- * WHMCS SDK Sample Provisioning Module
+ * Pterodactyl WHMCS Module
  *
- * Provisioning Modules, also referred to as Product or Server Modules, allow
- * you to create modules that allow for the provisioning and management of
- * products and services in WHMCS.
- *
- * This sample file demonstrates how a provisioning module for WHMCS should be
- * structured and exercises all supported functionality.
- *
- * Provisioning Modules are stored in the /modules/servers/ directory. The
- * module name you choose must be unique, and should be all lowercase,
- * containing only letters & numbers, always starting with a letter.
- *
- * Within the module itself, all functions must be prefixed with the module
- * filename, followed by an underscore, and then the function name. For this
- * example file, the filename is "provisioningmodule" and therefore all
- * functions begin "pterodactyl_".
- *
- * If your module or third party API does not support a given function, you
- * should not define that function within your module. Only the _ConfigOptions
- * function is required.
- *
- * For more information, please refer to the online documentation.
- *
- * @see http://docs.whmcs.com/Provisioning_Module_Developer_Docs
- *
- * @copyright Copyright (c) WHMCS Limited 2015
- * @license http://www.whmcs.com/license/ WHMCS Eula
+ * @copyright Copyright (c) Emmet Young 2016
  */
 
 if (!defined("WHMCS")) {
@@ -150,7 +125,31 @@ function pterodactyl_ConfigOptions()
 			'Type' => 'yesno',
 			'Default' => 'yes',
 			'Description' => 'Tick to enable auto deploy. You do not need the below options with auto deploy enabled.',
-		)
+		),
+		'node' => array(
+            'Type' => 'text',
+            'Size' => '25',
+            'Default' => '',
+            'Description' => 'ID of the node to assign the server to (must be apart of the specified location id).',
+	    ),
+		'allocation' => array(
+            'Type' => 'text',
+            'Size' => '25',
+            'Default' => '',
+            'Description' => 'The allocation ID to use for the server (only if not using auto_deploy, and not using ip and port).',
+	    ),
+		'ip' => array(
+            'Type' => 'text',
+            'Size' => '25',
+            'Default' => '',
+            'Description' => 'IP address of existing allocation to assign to server.',
+	    ),
+		'port' => array(
+            'Type' => 'text',
+            'Size' => '25',
+            'Default' => '',
+            'Description' => 'Port of existing allocation to assign to server. (Must include above IP address).',
+	    ),
     );
 }
 
@@ -174,7 +173,7 @@ function pterodactyl_CreateAccount(array $params)
 {
     try {
 		$newAccount = false;
-		
+
 		$url = $params['serverhostname'].'/api/users/'.$params['userid'];
 
 		$response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET');
@@ -216,12 +215,26 @@ function pterodactyl_CreateAccount(array $params)
 						  "service" => $params['configoption7'],
 						  "option" => $params['configoption8'],
 						  "startup" => $params['configoption9'],
-						  "auto_deploy" => true,
-						  "env_VANILLA_VERSION" => "latest",
+						  "auto_deploy" => $params['configoption10'] === 'on' ? true : false,
+						  "env_VANILLA_VERSION" => "latest", 
 						  "env_SERVER_JARFILE" => "server.jar",
 						  "custom_id" => $params['serviceid'],
 						 );
 
+			if ($params['configoption10'] === 'off')
+			{
+				$data["node"] = $params['configoption11'];
+				if(!isset($params['configoption12']))
+				{
+					$data["allocation"] = $params['configoption12']; 
+				}
+				else
+				{
+					$data["ip"] = $params['configoption13'];
+					$data["port"] = $params['configoption14'];
+				}
+			}
+						 
 			$response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST', $data);		
 			
 			if($response['status_code'] != 200)
@@ -234,8 +247,10 @@ function pterodactyl_CreateAccount(array $params)
 			return "Error during search for existing client: ".$response['data']->message;
 		}
 		
+		//Grab the admin ID, makes it easier to make calls to 
 		$adminid = Capsule::table('tbladmins')->where('disabled',0)->where('roleid',1)->pluck('id');  
 
+		//Setup all the parameters we want to pass into the email
 		$clientname = $params['clientsdetails']['fullname'];
 		$panelurl = $params['serverhostname'];
 		$clientemail = $params['clientsdetails']['email'];
@@ -244,7 +259,9 @@ function pterodactyl_CreateAccount(array $params)
 		$clientId['clientid'] = $params['userid'];
 		$clientServiceId['serviceid'] = $params['serviceid'];
 		
+		//Call the WHMCS api to get client details, we need this to display the currency code
 		$clientdetails = localAPI("getclientsdetails", $clientId, $adminid[0]);
+		//Also call the WHMCS API to get the product details for the client
 		$clientproducts = localAPI("getclientsproducts", $clientServiceId, $adminid[0]);
 		
 		$service_product_name = $clientproducts['products']['product'][0]['name'];
@@ -253,16 +270,18 @@ function pterodactyl_CreateAccount(array $params)
 		$service_next_due_date  = $clientproducts['products']['product'][0]['nextduedate'] == "0000-00-00" ? "----" :  $clientproducts['products']['product'][0]['nextduedate'];
 		$service_recurring_amount  = "$".$clientproducts['products']['product'][0]['recurringamount']." ".$clientdetails['currency_code']; 
 		
+		//Format the email for sending
 		$email["customtype"] = "product";
 		$email["customsubject"] = "New Product Information";
-		$email["custommessage"] = "<p>Dear $clientname,</p><p>Your order for <b>$service_product_name</b> has now been activated. Please keep this message for your records.</p>
-									<p><b>Product/Service:</b> $service_product_name <br />
-									<b>Payment Method:</b> $service_payment_method <br />
-									<b>Amount:</b> $service_recurring_amount <br />
-									<b>Billing Cycle:</b> $service_billing_cycle <br />
-									<b>Next Due Date:</b> $service_next_due_date <br /> <br />
-									<b>Panel Login URL:</b> <a href='$panelurl'>$panelurl</a><br />
-									<b>Panel Login Email:</b> $clientemail <br />";
+		$email["custommessage"] = "<p>Dear $clientname,</p>
+								   <p>Your order for <b>$service_product_name</b> has now been activated. Please keep this message for your records.</p>
+								   <p><b>Product/Service:</b> $service_product_name <br />
+								   <b>Payment Method:</b> $service_payment_method <br />
+								   <b>Amount:</b> $service_recurring_amount <br />
+								   <b>Billing Cycle:</b> $service_billing_cycle <br />
+								   <b>Next Due Date:</b> $service_next_due_date <br /> <br />
+								   <b>Panel Login URL:</b> <a href='$panelurl'>$panelurl</a><br />
+								   <b>Panel Login Email:</b> $clientemail <br />";
 		if ($newAccount)
 		{
 			$email["custommessage"] .= "<b>Panel Login Password:</b> $clientpassword <br />";
@@ -272,8 +291,8 @@ function pterodactyl_CreateAccount(array $params)
 			$email["custommessage"] .= "<b>Panel Login Password:</b> Use pre-existing password. <br /><br />";
 		}
 
+		//Make a call to Pterodactyl to grab all allocations for the new server
 		$url = $params['serverhostname'].'/api/nodes/allocations/'. $params['serviceid'];
-
         $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET');
 
         foreach($response['data']->allocations as $allocation)
@@ -595,8 +614,6 @@ function pterodactyl_ClientArea(array $params)
     $templateFile = 'templates/overview.tpl';
 
     try {
-        // Call the service's function based on the request action, using the
-        // values provided by WHMCS in `$params`.
         $response = array();
 
         $url = $params['serverhostname'].'/api/nodes/allocations/'. $params['serviceid'];
