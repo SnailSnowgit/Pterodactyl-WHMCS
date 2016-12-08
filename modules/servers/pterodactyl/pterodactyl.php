@@ -202,9 +202,7 @@ function pterodactyl_CreateAccount(array $params)
 		if($response['status_code'] == 200)
 		{
 			//Now get the panel to create a new server for our new user.
-			$url = $params['serverhostname'].'/api/servers';
-
-			$data = array("name" => $params['username']."_".$params['serviceid'],
+			$new_server = array("name" => $params['username']."_".$params['serviceid'],
 						  "owner" => $params['clientsdetails']['email'], 
 						  "memory" => $params['configoption1'],
 						  "swap" => $params['configoption2'],
@@ -216,26 +214,38 @@ function pterodactyl_CreateAccount(array $params)
 						  "option" => $params['configoption8'],
 						  "startup" => $params['configoption9'],
 						  "auto_deploy" => $params['configoption10'] === 'on' ? true : false,
-						  "env_VANILLA_VERSION" => "latest", 
-						  "env_SERVER_JARFILE" => "server.jar",
 						  "custom_id" => $params['serviceid'],
 						 );
+			
+			$service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');		
 
+			foreach($service['data']->options as $option)
+			{
+				if($option->id == $params['configoption8'])
+				{
+					foreach($option->variables as $variable)
+					{
+						$new_server["env_".$variable->env_variable] = isset($params['customfields']["env_".$variable->env_variable]) ? $params['customfields']["env_".$variable->env_variable]  : $variable->default_value;						
+					}
+					break;
+				}
+			}
+		
 			if ($params['configoption10'] === 'off')
 			{
-				$data["node"] = $params['configoption11'];
+				$new_server["node"] = $params['configoption11'];
 				if(!isset($params['configoption12']))
 				{
-					$data["allocation"] = $params['configoption12']; 
+					$new_server["allocation"] = $params['configoption12']; 
 				}
 				else
 				{
-					$data["ip"] = $params['configoption13'];
-					$data["port"] = $params['configoption14'];
+					$new_server["ip"] = $params['configoption13'];
+					$new_server["port"] = $params['configoption14'];
 				}
 			}
 						 
-			$response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST', $data);		
+			$response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers', 'POST', $new_server);		
 			
 			if($response['status_code'] != 200)
 			{
