@@ -181,7 +181,7 @@ function pterodactyl_CreateAccount(array $params)
 		if ($response['status_code'] == 404)
 		{
 			//Begin by creating the user on the panel side
-			$url = $params['configoption3'].'users';
+			$url = $params['serverhostname'].'/api/users/';
 			
 			$data = array("email" => $params['clientsdetails']['email'],
 						  "admin" => false, 
