@@ -212,13 +212,14 @@ function pterodactyl_CreateAccount(array $params)
 						  "location" => $params['configoption6'],
 						  "service" => $params['configoption7'],
 						  "option" => $params['configoption8'],
-						  "startup" => $params['configoption9'],
 						  "auto_deploy" => $params['configoption10'] === 'on' ? true : false,
 						  "custom_id" => $params['serviceid'],
 						 );
 			
 			$service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');		
 
+			$new_server["startup"] = isset($params['configoption9']) ? $params['configoption9'] : $service['data']->service->startup;
+			
 			foreach($service['data']->options as $option)
 			{
 				if($option->id == $params['configoption8'])
