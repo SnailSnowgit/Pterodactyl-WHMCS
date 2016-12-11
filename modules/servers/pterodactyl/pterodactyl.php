@@ -226,7 +226,7 @@ function pterodactyl_CreateAccount(array $params)
 			
 			foreach($service['data']->options as $option)
 			{
-				if((isset($option_tag) && (strcasecmp($option->tag, $params['configoptions']['option_tag']) == 0)) || 
+				if((isset($option_tag) && (strcasecmp($option->tag, $option_tag) == 0)) || 
 				   (!isset($option_tag) && ($params['configoption8'] == $option->id)))
 				{
 					$new_server['option'] = $option->id;
