@@ -214,36 +214,35 @@ function pterodactyl_CreateAccount(array $params)
 						  "auto_deploy" => $params['configoption10'] === 'on' ? true : false,
 						  "custom_id" => $params['serviceid'],
 						 );
-			
+
 			$service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');		
 
 			$new_server["startup"] = isset($params['configoption9']) ? $params['configoption9'] : $service['data']->service->startup;
 			
-			if(isset($params['configoptions']['option_tag']))
-				$option_tag = $params['configoptions']['option_tag'];
-			else if(isset($params['customfields']['option_tag']))
-				$option_tag = $params['customfields']['option_tag'];		
-			
+			if(isset($params['configoptions']['option_id']))
+				$option_id = $params['configoptions']['option_id'];
+			else if(isset($params['customfields']['option_id']))
+				$option_id = $params['customfields']['option_id'];		
+
 			foreach($service['data']->options as $option)
 			{
-				if((isset($option_tag) && (strcasecmp($option->tag, $option_tag) == 0)) || 
-				   (!isset($option_tag) && ($params['configoption8'] == $option->id)))
+				if ((isset($option_id) && ($option_id == $option->id) || 
+				   (!isset($option_id) && ($params['configoption8'] == $option->id)))
 				{
 					$new_server['option'] = $option->id;
 					foreach($option->variables as $variable)
 					{
-						
 						if(isset($params['configoptions']["env_".$variable->env_variable]))
 							$env_varaiable = $params['configoptions']["env_".$variable->env_variable];
 						else if(isset($params['customfields']["env_".$variable->env_variable]))
 							$env_varaiable = $params['customfields']["env_".$variable->env_variable];
-						
+
 						$new_server["env_".$variable->env_variable] = isset($env_varaiable) ? $env_varaiable : $variable->default_value;
 					}
 					break;
 				}
 			}
-		
+
 			if ($params['configoption10'] === 'off')
 			{
 				$new_server["node"] = $params['configoption11'];
@@ -257,9 +256,9 @@ function pterodactyl_CreateAccount(array $params)
 					$new_server["port"] = $params['configoption14'];
 				}
 			}
-						 
+
 			$response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers', 'POST', $new_server);		
-			
+
 			if($response['status_code'] != 200)
 			{
 				return "Error during create server: ".$response['data']->message;
@@ -269,7 +268,7 @@ function pterodactyl_CreateAccount(array $params)
 		{
 			return "Error during search for existing client: ".$response['data']->message;
 		}
-		
+
 		//Grab the admin ID, makes it easier to make calls to 
 		$adminid = Capsule::table('tbladmins')->where('disabled',0)->where('roleid',1)->pluck('id');  
 
@@ -286,13 +285,13 @@ function pterodactyl_CreateAccount(array $params)
 		$clientdetails = localAPI("getclientsdetails", $clientId, $adminid[0]);
 		//Also call the WHMCS API to get the product details for the client
 		$clientproducts = localAPI("getclientsproducts", $clientServiceId, $adminid[0]);
-		
+
 		$service_product_name = $clientproducts['products']['product'][0]['name'];
 		$service_payment_method = $clientproducts['products']['product'][0]['paymentmethodname'];
 		$service_billing_cycle = $clientproducts['products']['product'][0]['billingcycle'];
 		$service_next_due_date  = $clientproducts['products']['product'][0]['nextduedate'] == "0000-00-00" ? "----" :  $clientproducts['products']['product'][0]['nextduedate'];
 		$service_recurring_amount  = "$".$clientproducts['products']['product'][0]['recurringamount']." ".$clientdetails['currency_code']; 
-		
+
 		//Format the email for sending
 		$email["customtype"] = "product";
 		$email["customsubject"] = "New Product Information";
@@ -326,7 +325,7 @@ function pterodactyl_CreateAccount(array $params)
                 $email["custommessage"] .= "<b>Server Alias:</b> ".$allocation->ip_alias.":".$allocation->port."<br />";
             }
         }
-		
+
 		$email["custommessage"] .= "</p>
 									 <p>Thank you for choosing us.</p>";
 
