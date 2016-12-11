@@ -66,91 +66,91 @@ function pterodactyl_MetaData()
  */
 function pterodactyl_ConfigOptions()
 {
-    return array(
+	return array(
 		'memory' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '1024',
-            'Description' => 'Total memory (in MB) to assign to the server',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '1024',
+			'Description' => 'Total memory (in MB) to assign to the server',
+		),
 		'swap' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '256',
-            'Description' => 'Total swap (in MB) to assign to the server',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '256',
+			'Description' => 'Total swap (in MB) to assign to the server',
+		),
 		'cpu' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '50',
-            'Description' => 'Cpu limit, value is as a percentage of each core. One core being 100%.',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '50',
+			'Description' => 'Cpu limit, value is as a percentage of each core. One core being 100%.',
+		),
 		'io' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '500',
-            'Description' => 'Block IO adjustment number.',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '500',
+			'Description' => 'Block IO adjustment number.',
+		),
 		'disk' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '1024',
-            'Description' => 'Total disk space (in MB) to assign to the server.',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '1024',
+			'Description' => 'Total disk space (in MB) to assign to the server.',
+		),
 		'location' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '1',
-            'Description' => 'ID of location in which server should be created.',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '1',
+			'Description' => 'ID of location in which server should be created.',
+		),
 		'service' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '1',
-            'Description' => 'ID of the service this server is using.',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '1',
+			'Description' => 'ID of the service this server is using.',
+		),
 		'option' => array(
-            'Type' => 'text',
-            'Size' => '10',
-            'Default' => '1',
-            'Description' => 'ID of the specific service option this server is using.',
-        ),
+			'Type' => 'text',
+			'Size' => '10',
+			'Default' => '1',
+			'Description' => 'ID of the specific service option this server is using.',
+		),
 		'startup' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'The startup parameters this server is using.',
-        ),
+			'Type' => 'text',
+			'Size' => '25',
+			'Default' => '',
+			'Description' => 'The startup parameters this server is using.',
+		),
 		'auto_deploy' => array(
 			'Type' => 'yesno',
 			'Default' => 'yes',
 			'Description' => 'Tick to enable auto deploy. You do not need the below options with auto deploy enabled.',
 		),
 		'node' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'ID of the node to assign the server to (must be apart of the specified location id).',
-	    ),
+			'Type' => 'text',
+			'Size' => '25',
+			'Default' => '',
+			'Description' => 'ID of the node to assign the server to (must be apart of the specified location id).',
+		),
 		'allocation' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'The allocation ID to use for the server (only if not using auto_deploy, and not using ip and port).',
-	    ),
+			'Type' => 'text',
+			'Size' => '25',
+			'Default' => '',
+			'Description' => 'The allocation ID to use for the server (only if not using auto_deploy, and not using ip and port).',
+		),
 		'ip' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'IP address of existing allocation to assign to server.',
-	    ),
+			'Type' => 'text',
+			'Size' => '25',
+			'Default' => '',
+			'Description' => 'IP address of existing allocation to assign to server.',
+		),
 		'port' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'Port of existing allocation to assign to server. (Must include above IP address).',
-	    ),
-    );
+			'Type' => 'text',
+			'Size' => '25',
+			'Default' => '',
+			'Description' => 'Port of existing allocation to assign to server. (Must include above IP address).',
+		),
+	);
 }
 
 /**
@@ -211,7 +211,6 @@ function pterodactyl_CreateAccount(array $params)
 						  "disk" => $params['configoption5'],
 						  "location" => $params['configoption6'],
 						  "service" => $params['configoption7'],
-						  "option" => $params['configoption8'],
 						  "auto_deploy" => $params['configoption10'] === 'on' ? true : false,
 						  "custom_id" => $params['serviceid'],
 						 );
@@ -220,13 +219,26 @@ function pterodactyl_CreateAccount(array $params)
 
 			$new_server["startup"] = isset($params['configoption9']) ? $params['configoption9'] : $service['data']->service->startup;
 			
+			if(isset($params['configoptions']['option_tag']))
+				$option_tag = $params['configoptions']['option_tag'];
+			else if(isset($params['customfields']['option_tag']))
+				$option_tag = $params['customfields']['option_tag'];		
+			
 			foreach($service['data']->options as $option)
 			{
-				if($option->id == $params['configoption8'])
+				if((isset($option_tag) && (strcasecmp($option->tag, $params['configoptions']['option_tag']) == 0)) || 
+				   (!isset($option_tag) && ($params['configoption8'] == $option->id)))
 				{
+					$new_server['option'] = $option->id;
 					foreach($option->variables as $variable)
 					{
-						$new_server["env_".$variable->env_variable] = isset($params['customfields']["env_".$variable->env_variable]) ? $params['customfields']["env_".$variable->env_variable]  : $variable->default_value;						
+						
+						if(isset($params['configoptions']["env_".$variable->env_variable]))
+							$env_varaiable = $params['configoptions']["env_".$variable->env_variable];
+						else if(isset($params['customfields']["env_".$variable->env_variable]))
+							$env_varaiable = $params['customfields']["env_".$variable->env_variable];
+						
+						$new_server["env_".$variable->env_variable] = isset($env_varaiable) ? $env_varaiable : $variable->default_value;
 					}
 					break;
 				}
