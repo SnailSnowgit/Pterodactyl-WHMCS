@@ -218,7 +218,20 @@ function pterodactyl_CreateAccount(array $params)
             $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');      
 
             $new_server["startup"] = isset($params['configoption9']) ? $params['configoption9'] : $service['data']->service->startup;
+
+            //Handle overiding location ID
+            if(isset($params['configoptions']['location_id']))
+                 $new_server['location'] = $params['configoptions']['location_id'];
+            else if(isset($params['customfields']['location_id']))
+                 $new_server['location'] = $params['customfields']['location_id'];      
             
+            //Handle overiding of service ID
+            if(isset($params['configoptions']['service_id']))
+                 $new_server['service'] = $params['configoptions']['service_id'];
+            else if(isset($params['customfields']['service_id']))
+                 $new_server['service'] = $params['customfields']['service_id'];
+            
+            //Handle overiding of option id
             if(isset($params['configoptions']['option_id']))
                 $option_id = $params['configoptions']['option_id'];
             else if(isset($params['customfields']['option_id']))
@@ -232,6 +245,7 @@ function pterodactyl_CreateAccount(array $params)
                     $new_server['option'] = $option->id;
                     foreach($option->variables as $variable)
                     {
+                        //Handle overding of any enviornment variables, also feed in all default values
                         if(isset($params['configoptions']["env_".$variable->env_variable]))
                             $env_varaiable = $params['configoptions']["env_".$variable->env_variable];
                         else if(isset($params['customfields']["env_".$variable->env_variable]))
@@ -243,9 +257,19 @@ function pterodactyl_CreateAccount(array $params)
                 }
             }
 
+            //If auto deploy is enabled, we need additional information
             if ($params['configoption10'] === 'off')
             {
-                $new_server["node"] = $params['configoption11'];
+                
+                //Handle overiding of the base node ID
+                if(isset($params['configoptions']['node_id']))
+                    $new_server['node'] = $params['configoptions']['node_id'];
+                else if(isset($params['customfields']['node_id']))
+                    $new_server['node'] = $params['customfields']['node_id'];
+                else
+                    $new_server["node"] = $params['configoption11'];
+                
+                //Check if we are assigning to a specific allocation or require an IP and port to be supplied
                 if(!isset($params['configoption12']))
                 {
                     $new_server["allocation"] = $params['configoption12']; 
