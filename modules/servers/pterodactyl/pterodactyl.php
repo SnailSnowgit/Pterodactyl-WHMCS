@@ -235,12 +235,14 @@ function pterodactyl_CreateAccount(array $params)
             if(isset($params['configoptions']['option_id']))
                 $option_id = $params['configoptions']['option_id'];
             else if(isset($params['customfields']['option_id']))
-                $option_id = $params['customfields']['option_id'];      
+                $option_id = $params['customfields']['option_id'];
+            else
+                $option_id = $params['configoption8'];
+                
 
             foreach($service['data']->options as $option)
             {
-                if ((isset($option_id) && ($option_id == $option->id)) || 
-                    (!isset($option_id) && ($params['configoption8'] == $option->id)))
+                if ($option_id == $option->id)
                 {
                     $new_server['option'] = $option->id;
                     foreach($option->variables as $variable)
