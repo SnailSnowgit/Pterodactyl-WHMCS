@@ -173,7 +173,7 @@ function pterodactyl_CreateAccount(array $params)
 { 
     try {
         
-        if(!Capsule::schema()->hasTable('tbl_pterodactylproduct'))99
+        if(!Capsule::schema()->hasTable('tbl_pterodactylproduct'))
         {
             Capsule::schema()->create(
                 'tbl_pterodactylproduct',
