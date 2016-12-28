@@ -11,6 +11,14 @@ if (!defined("WHMCS")) {
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 
+/**
+ * Makes a formatted API call to Pterodactyl utilizing CURL.
+ *
+ * Values returned here are the result of the API called to the
+ * pterodactyl panel.
+ *
+ * @return array
+ */
 function pterodactyl_api_call($publickey, $privatekey, $url, $type, array $data = NULL )
 {
     $curl = curl_init();
@@ -206,7 +214,7 @@ function pterodactyl_CreateAccount(array $params)
 
             if($response['status_code'] != 200)
             {
-                return "Error during create account: ".$response['data']->message.json_encode($data);
+                return "Error during create account: ".$response['data']->message;
             }
             $user_id = $response['data']->id;
             $newAccount = true;
@@ -245,20 +253,20 @@ function pterodactyl_CreateAccount(array $params)
              $new_server['service'] = $params['configoptions']['service_id'];
         else if(isset($params['customfields']['service_id']))
              $new_server['service'] = $params['customfields']['service_id'];
-        
+
         //Handle overiding of option id
         if(isset($params['configoptions']['option_id']))
-            $option_id = $params['configoptions']['option_id'];
+            $new_server['option'] = $params['configoptions']['option_id'];
         else if(isset($params['customfields']['option_id']))
-            $option_id = $params['customfields']['option_id'];
+            $new_server['option'] = $params['customfields']['option_id'];
         else
-            $option_id = $params['configoption8'];
-            
+            $new_server['option'] = $params['configoption8'];
+        
+        //We need to loop through every option to handle environment variables for our specified option
         foreach($service['data']->options as $option)
         {
-            if ($option_id == $option->id)
+            if ($new_server['option'] == $option->id)
             {
-                $new_server['option'] = $option->id;
                 foreach($option->variables as $variable)
                 {
                     //Handle overding of any enviornment variables, also feed in all default values
@@ -309,7 +317,7 @@ function pterodactyl_CreateAccount(array $params)
                 ['client_id' => $params['userid'],'service_id' => $params['serviceid'], 'user_id' => $user_id,'server_id' => $server_id]
         );
         
-        //Grab the admin ID, makes it easier to make calls to 
+        //Grab the admin ID, makes it easier to make calls to the API
         $adminid = Capsule::table('tbladmins')->where('disabled',0)->where('roleid',1)->pluck('id');  
 
         //Setup all the parameters we want to pass into the email
