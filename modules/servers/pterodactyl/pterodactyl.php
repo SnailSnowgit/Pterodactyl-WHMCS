@@ -180,6 +180,7 @@ function pterodactyl_ConfigOptions()
 function pterodactyl_CreateAccount(array $params)
 { 
     try {
+        $newAccount = false;
         
         if(!Capsule::schema()->hasTable('tbl_pterodactylproduct'))
         {
@@ -202,6 +203,25 @@ function pterodactyl_CreateAccount(array $params)
 
         if (empty($sql_user))
         {
+            $url = $params['serverhostname'].'/api/users';
+            $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
+            
+            foreach($users['data'] as $userdata)
+            {
+                if($userdata->email === $params['clientsdetails']['email'])
+                {
+                    $user_id = $userdata->id;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            $user_id = $sql_user->user_id;
+        }
+       
+       if(!isset($user_id))
+       {
             //Begin by creating the user on the panel side
             $url = $params['serverhostname'].'/api/users';
 
@@ -218,11 +238,6 @@ function pterodactyl_CreateAccount(array $params)
             }
             $user_id = $response['data']->id;
             $newAccount = true;
-        }
-        else
-        {
-            $newAccount = false;
-            $user_id = $sql_user->user_id;
         }
 
         //Now get the panel to create a new server for our new user.
