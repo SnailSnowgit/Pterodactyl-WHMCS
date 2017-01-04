@@ -206,12 +206,10 @@ function pterodactyl_CreateAccount(array $params)
             $url = $params['serverhostname'].'/api/users/'.$params['clientsdetails']['email'].'?fields=id';
             $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
 
-            if($response['status_code'] != 200)
+            if($users['status_code'] == 200)
             {
-                return "Error during search for account: ".$response['data']->message;
+                $user_id = $users['data']->id;
             }
-
-            $user_id = $users['data']->id;
         }
         else
         {
