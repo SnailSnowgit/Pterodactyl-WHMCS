@@ -284,10 +284,10 @@ function pterodactyl_CreateAccount(array $params)
                 foreach($option->variables as $variable)
                 {
                     //Handle overding of any enviornment variables, also feed in all default values
-                    if(isset($params['configoptions']["env_".$variable->env_variable]))
-                        $env_varaiable = $params['configoptions']["env_".$variable->env_variable];
-                    else if(isset($params['customfields']["env_".$variable->env_variable]))
-                        $env_varaiable = $params['customfields']["env_".$variable->env_variable];
+                    if(isset($params['configoptions'][$variable->env_variable]))
+                        $env_varaiable = $params['configoptions'][$variable->env_variable];
+                    else if(isset($params['customfields'][$variable->env_variable]))
+                        $env_varaiable = $params['customfields'][$variable->env_variable];
 
                     $new_server["env_".$variable->env_variable] = isset($env_varaiable) ? $env_varaiable : $variable->default_value;
                 }
