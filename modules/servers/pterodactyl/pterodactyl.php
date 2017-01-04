@@ -276,6 +276,8 @@ function pterodactyl_CreateAccount(array $params)
                         $env_varaiable = $params['customfields'][$variable->env_variable];
 
                     $new_server["env_".$variable->env_variable] = isset($env_varaiable) ? $env_varaiable : $variable->default_value;
+                    
+                    $env_varaiable = NULL;
                 }
                 break;
             }
