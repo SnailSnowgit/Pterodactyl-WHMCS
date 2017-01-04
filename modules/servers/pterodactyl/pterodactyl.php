@@ -203,25 +203,23 @@ function pterodactyl_CreateAccount(array $params)
 
         if (empty($sql_user))
         {
-            $url = $params['serverhostname'].'/api/users';
+            $url = $params['serverhostname'].'/api/users/'.$params['clientsdetails']['email'].'?fields=id';
             $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
-            
-            foreach($users['data'] as $userdata)
+
+            if($response['status_code'] != 200)
             {
-                if($userdata->email === $params['clientsdetails']['email'])
-                {
-                    $user_id = $userdata->id;
-                    break;
-                }
+                return "Error during search for account: ".$response['data']->message;
             }
+
+            $user_id = $users['data']->id;
         }
         else
         {
             $user_id = $sql_user->user_id;
         }
        
-       if(!isset($user_id))
-       {
+        if(!isset($user_id))
+        {
             //Begin by creating the user on the panel side
             $url = $params['serverhostname'].'/api/users';
 
@@ -236,6 +234,7 @@ function pterodactyl_CreateAccount(array $params)
             {
                 return "Error during create account: ".$response['data']->message;
             }
+            
             $user_id = $response['data']->id;
             $newAccount = true;
         }
