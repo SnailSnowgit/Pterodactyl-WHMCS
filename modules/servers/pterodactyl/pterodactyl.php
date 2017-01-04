@@ -195,25 +195,13 @@ function pterodactyl_CreateAccount(array $params)
                 }
             );
         }
-       
-        $sql_user = Capsule::table('tbl_pterodactylproduct')
-                                ->select('user_id')
-                                ->where('client_id', '=', $params['userid'])
-                                ->first();
 
-        if (empty($sql_user))
-        {
-            $url = $params['serverhostname'].'/api/users/'.$params['clientsdetails']['email'].'?fields=id';
-            $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
+        $url = $params['serverhostname'].'/api/users/'.$params['clientsdetails']['email'].'?fields=id';
+        $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
 
-            if($users['status_code'] == 200)
-            {
-                $user_id = $users['data']->id;
-            }
-        }
-        else
+        if($users['status_code'] == 200)
         {
-            $user_id = $sql_user->user_id;
+            $user_id = $users['data']->id;
         }
        
         if(!isset($user_id))
