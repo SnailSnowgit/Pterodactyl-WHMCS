@@ -218,7 +218,7 @@ function pterodactyl_CreateAccount(array $params)
 
             if($response['status_code'] != 200)
             {
-                return "Error during create account: ".$response['data']->message;
+                return "Error during create account: ".$response['data']->message + " Status Code: ".$response['status_code'];
             }
             
             $user_id = $response['data']->id;
@@ -310,7 +310,7 @@ function pterodactyl_CreateAccount(array $params)
 
         if($response['status_code'] != 200)
         {
-            return "Error during create server: ".$response['data']->message;
+            return "Error during create server: ".$response['data']->message + " Status Code: ".$response['status_code'];
         }
         
         $server_id = $response['data']->id;
