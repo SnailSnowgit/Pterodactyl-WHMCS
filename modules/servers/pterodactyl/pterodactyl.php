@@ -260,12 +260,19 @@ function pterodactyl_CreateAccount(array $params)
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');      
 
-        $new_server["startup"] = isset($params['configoption9']) ? $params['configoption9'] : $service['data']->service->startup;
-
+        if (isset($params['configoptions']['startup']))
+            $new_server['startup'] = $params['configoptions']['startup'];
+        else if (isset($params['customfields']['startup']))
+            $new_server['startup'] = $params['customfields']['startup'];     
+        else if isset($params['configoption9'])
+            $new_server['startup'] = $params['configoption9'];
+        else
+            $new_server['startup'] = $service['data']->service->startup;
+        
         //Handle overiding location ID
-        if(isset($params['configoptions']['location_id']))
+        if (isset($params['configoptions']['location_id']))
              $new_server['location'] = $params['configoptions']['location_id'];
-        else if(isset($params['customfields']['location_id']))
+        else if (isset($params['customfields']['location_id']))
              $new_server['location'] = $params['customfields']['location_id'];      
         
         //Handle overiding of service ID
