@@ -264,7 +264,7 @@ function pterodactyl_CreateAccount(array $params)
             $new_server['startup'] = $params['configoptions']['startup'];
         else if (isset($params['customfields']['startup']))
             $new_server['startup'] = $params['customfields']['startup'];     
-        else if isset($params['configoption9'])
+        else if (isset($params['configoption9']))
             $new_server['startup'] = $params['configoption9'];
         else
             $new_server['startup'] = $service['data']->service->startup;
