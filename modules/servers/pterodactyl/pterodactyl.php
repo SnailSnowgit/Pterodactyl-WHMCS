@@ -182,6 +182,22 @@ function pterodactyl_ConfigOptions()
 }
 
 /**
+ * Generate a random string.
+ */
+public function generate_username()
+{
+    $length = 8;
+    $returnable = false;
+    while (! $returnable) {
+        $generated = str_random($length);
+        if (preg_match('/[A-Z]+[a-z]+[0-9]+/', $generated)) {
+            $returnable = true;
+        }
+    }
+    return $generated;
+}
+
+/**
  * Provision a new instance of a product/service.
  *
  * Attempt to provision a new instance of a given product/service. This is
@@ -244,9 +260,11 @@ function pterodactyl_CreateAccount(array $params)
             $user_id = $response['data']->id;
             $newAccount = true;
         }
-
+        
+        $server_name = generate_username();
+        
         //Now get the panel to create a new server for our new user.
-        $new_server = array("name" => $params['username']."_".$params['serviceid'],
+        $new_server = array("name" => $server_name."_".$params['serviceid'],
                             "owner" => $params['clientsdetails']['email'], 
                             "memory" => $params['configoption1'],
                             "swap" => $params['configoption2'],
