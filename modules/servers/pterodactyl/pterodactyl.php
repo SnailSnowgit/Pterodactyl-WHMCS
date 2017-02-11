@@ -184,12 +184,11 @@ function pterodactyl_ConfigOptions()
 /**
  * Generate a random string.
  */
-public function generate_username()
+function generate_username()
 {
-    $length = 8;
     $returnable = false;
-    while (! $returnable) {
-        $generated = str_random($length);
+    while (!$returnable) {
+        $generated = str_random(8);
         if (preg_match('/[A-Z]+[a-z]+[0-9]+/', $generated)) {
             $returnable = true;
         }
