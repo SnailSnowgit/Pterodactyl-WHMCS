@@ -245,7 +245,10 @@ function pterodactyl_CreateAccount(array $params)
             $url = $params['serverhostname'].'/api/users';
 
             $data = array("email" => $params['clientsdetails']['email'],
-                          "admin" => false, 
+                          "username" => generate_username(),
+                          "name_first" => $params['clientsdetails']['firstname'],
+                          "name_last" => $params['clientsdetails']['lastname'],
+                          "root_admin" => false, 
                           "password" => $params['password']
                          );
 
@@ -277,6 +280,14 @@ function pterodactyl_CreateAccount(array $params)
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');      
 
+        
+        if (isset($params['configoptions']['pack_id']))
+            $new_server['pack'] = $params['configoptions']['pack_id'];
+        else if (isset($params['customfields']['pack_id']))
+            $new_server['pack'] = $params['customfields']['pack_id'];     
+        else
+            $new_server['pack'] = 0;
+        
         if (isset($params['configoptions']['startup']))
             $new_server['startup'] = $params['configoptions']['startup'];
         else if (isset($params['customfields']['startup']))
@@ -441,6 +452,47 @@ function pterodactyl_CreateAccount(array $params)
     }
 
     return 'success';
+}
+
+/**
+ * Test connection with the given server parameters.
+ *
+ * @return array
+ */
+function pterodactyl_TestConnection(array $params)
+{
+    try {
+        // Call the service's connection test function.
+        
+        $url = $params['serverhostname'].'/api/nodes';
+        $nodes = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
+    
+        if($nodes['status_code'] != 200)
+        {
+            $success = false;
+            $errorMsg = 'Failed to connect to server, ensure your API keys are correct and your panel is running on a valid SSL Certificate.';
+        }    
+        else   
+        {
+            $success = true;
+            $errorMsg = '';
+        }
+    } catch (Exception $e) {
+        // Record the error in WHMCS's module log.
+        logModuleCall(
+            'provisioningmodule',
+            __FUNCTION__,
+            $params,
+            $e->getMessage(),
+            $e->getTraceAsString()
+        );
+        $success = false;
+        $errorMsg = $e->getMessage();
+    }
+    return array(
+        'success' => $success,
+        'error' => $errorMsg,
+    );
 }
 
 function pterodactyl_get_client($serviceid)
