@@ -178,6 +178,12 @@ function pterodactyl_ConfigOptions()
             'Default' => '',
             'Description' => 'Port of existing allocation to assign to server. (Must include above IP address).',
         ),
+        'pack' => array (
+            'Type' => 'text',
+            'Size' => '25',
+            'Default' => '0',
+            'Description' => 'Pack ID number, leave as 0 if you dont want to utilize it.',
+         ),
     );
 }
 
@@ -273,20 +279,18 @@ function pterodactyl_CreateAccount(array $params)
                             "cpu" => $params['configoption3'],
                             "io" => $params['configoption4'],
                             "disk" => $params['configoption5'],
-                            "location" => $params['configoption6'],
-                            "service" => $params['configoption7'],
+                            "location_id" => $params['configoption6'],
+                            "service_id" => $params['configoption7'],
+                            "pack_id" => $params['configoption15'],
                             "auto_deploy" => $params['configoption10'] === 'on' ? true : false
                            );
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');      
-
         
         if (isset($params['configoptions']['pack_id']))
-            $new_server['pack'] = $params['configoptions']['pack_id'];
+            $new_server['pack_id'] = $params['configoptions']['pack_id'];
         else if (isset($params['customfields']['pack_id']))
-            $new_server['pack'] = $params['customfields']['pack_id'];     
-        else
-            $new_server['pack'] = 0;
+            $new_server['pack_id'] = $params['customfields']['pack_id'];     
         
         if (isset($params['configoptions']['startup']))
             $new_server['startup'] = $params['configoptions']['startup'];
@@ -295,32 +299,32 @@ function pterodactyl_CreateAccount(array $params)
         else if (isset($params['configoption9']))
             $new_server['startup'] = $params['configoption9'];
         else
-            $new_server['startup'] = $service['data']->service->startup;
+            $new_server['startup'] = $service['data']->startup;
         
         //Handle overiding location ID
         if (isset($params['configoptions']['location_id']))
-             $new_server['location'] = $params['configoptions']['location_id'];
+             $new_server['location_id'] = $params['configoptions']['location_id'];
         else if (isset($params['customfields']['location_id']))
-             $new_server['location'] = $params['customfields']['location_id'];      
+             $new_server['location_id'] = $params['customfields']['location_id'];      
         
         //Handle overiding of service ID
         if(isset($params['configoptions']['service_id']))
-             $new_server['service'] = $params['configoptions']['service_id'];
+             $new_server['service_id'] = $params['configoptions']['service_id'];
         else if(isset($params['customfields']['service_id']))
-             $new_server['service'] = $params['customfields']['service_id'];
+             $new_server['service_id'] = $params['customfields']['service_id'];
 
         //Handle overiding of option id
         if(isset($params['configoptions']['option_id']))
-            $new_server['option'] = $params['configoptions']['option_id'];
+            $new_server['option_id'] = $params['configoptions']['option_id'];
         else if(isset($params['customfields']['option_id']))
-            $new_server['option'] = $params['customfields']['option_id'];
+            $new_server['option_id'] = $params['customfields']['option_id'];
         else
-            $new_server['option'] = $params['configoption8'];
+            $new_server['option_id'] = $params['configoption8'];
         
         //We need to loop through every option to handle environment variables for our specified option
         foreach($service['data']->options as $option)
         {
-            if ($new_server['option'] == $option->id)
+            if ($new_server['option_id'] == $option->id)
             {
                 foreach($option->variables as $variable)
                 {
@@ -343,11 +347,11 @@ function pterodactyl_CreateAccount(array $params)
         {
             //Handle overiding of the base node ID
             if(isset($params['configoptions']['node_id']))
-                $new_server['node'] = $params['configoptions']['node_id'];
+                $new_server['node_id'] = $params['configoptions']['node_id'];
             else if(isset($params['customfields']['node_id']))
-                $new_server['node'] = $params['customfields']['node_id'];
+                $new_server['node_id'] = $params['customfields']['node_id'];
             else
-                $new_server["node"] = $params['configoption11'];
+                $new_server["node_id"] = $params['configoption11'];
             
             //Check if we are assigning to a specific allocation or require an IP and port to be supplied
             if(!isset($params['configoption12']))
