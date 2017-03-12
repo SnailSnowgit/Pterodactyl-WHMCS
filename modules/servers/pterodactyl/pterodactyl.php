@@ -465,22 +465,18 @@ function pterodactyl_CreateAccount(array $params)
  */
 function pterodactyl_TestConnection(array $params)
 {
-    try {
-        // Call the service's connection test function.
-        
+    try {       
+        $success = true;
+        $errorMsg = '';
+
         $url = $params['serverhostname'].'/api/nodes';
         $nodes = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
     
         if($nodes['status_code'] != 200)
         {
             $success = false;
-            $errorMsg = 'Failed to connect to server, ensure your API keys are correct and your panel is running on a valid SSL Certificate.';
+            $errorMsg = 'Failed to connect to server, ensure your API keys are correct and your panel is running on a valid SSL Certificate. Failed with HTTP Status Code: ' + $nodes['status_code'];
         }    
-        else   
-        {
-            $success = true;
-            $errorMsg = '';
-        }
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
