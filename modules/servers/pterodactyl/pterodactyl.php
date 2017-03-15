@@ -281,11 +281,18 @@ function pterodactyl_CreateAccount(array $params)
                             "disk" => $params['configoption5'],
                             "location_id" => $params['configoption6'],
                             "service_id" => $params['configoption7'],
+                            "option_id" => $params['configoption8'],
                             "pack_id" => $params['configoption15'],
                             "auto_deploy" => $params['configoption10'] === 'on' ? true : false
                            );
 
-        $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$params['configoption7'], 'GET');      
+        //Handle overiding of service ID, we need to handle this before grabbing the service
+        if(isset($params['configoptions']['service_id']))
+             $new_server['service_id'] = $params['configoptions']['service_id'];
+        else if(isset($params['customfields']['service_id']))
+             $new_server['service_id'] = $params['customfields']['service_id'];
+
+        $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$new_server['service_id'], 'GET');      
         
         if (isset($params['configoptions']['pack_id']))
             $new_server['pack_id'] = $params['configoptions']['pack_id'];
@@ -306,20 +313,12 @@ function pterodactyl_CreateAccount(array $params)
              $new_server['location_id'] = $params['configoptions']['location_id'];
         else if (isset($params['customfields']['location_id']))
              $new_server['location_id'] = $params['customfields']['location_id'];      
-        
-        //Handle overiding of service ID
-        if(isset($params['configoptions']['service_id']))
-             $new_server['service_id'] = $params['configoptions']['service_id'];
-        else if(isset($params['customfields']['service_id']))
-             $new_server['service_id'] = $params['customfields']['service_id'];
 
         //Handle overiding of option id
         if(isset($params['configoptions']['option_id']))
             $new_server['option_id'] = $params['configoptions']['option_id'];
         else if(isset($params['customfields']['option_id']))
-            $new_server['option_id'] = $params['customfields']['option_id'];
-        else
-            $new_server['option_id'] = $params['configoption8'];
+            $new_server['option_id'] = $params['customfields']['option_id'];            
         
         //We need to loop through every option to handle environment variables for our specified option
         foreach($service['data']->options as $option)
