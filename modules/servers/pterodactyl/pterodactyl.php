@@ -188,6 +188,26 @@ function pterodactyl_ConfigOptions()
 }
 
 /**
+ * Handle the creation of our user table.
+ */
+function create_user_table()
+{
+    if(!Capsule::schema()->hasTable('tbl_pterodactylproduct'))
+    {
+        Capsule::schema()->create(
+            'tbl_pterodactylproduct',
+            function ($table) {
+                $table->increments('id');
+                $table->integer('client_id');
+                $table->integer('service_id');
+                $table->integer('user_id');
+                $table->integer('server_id');
+            }
+        );
+    }
+}
+
+/**
  * Generate a random string.
  */
 function generate_username()
@@ -200,6 +220,21 @@ function generate_username()
         }
     }
     return $generated;
+}
+
+/**
+ * Handle overiding of variables.
+ */
+function handle_overide($params, $overide_variable, $config_option, $data = NULL)
+{
+    if (isset($params['configoptions'][$overide_variable]))
+        return $params['configoptions'][$overide_variable];
+    else if (isset($params['customfields']['startup']))
+        return $params['customfields'][$overide_variable];     
+    else if (isset($params[$config_option]))
+        return $params[$config_option];
+    else 
+        return $data;
 }
 
 /**
@@ -223,19 +258,7 @@ function pterodactyl_CreateAccount(array $params)
     try {
         $newAccount = false;
         
-        if(!Capsule::schema()->hasTable('tbl_pterodactylproduct'))
-        {
-            Capsule::schema()->create(
-                'tbl_pterodactylproduct',
-                function ($table) {
-                    $table->increments('id');
-                    $table->integer('client_id');
-                    $table->integer('service_id');
-                    $table->integer('user_id');
-                    $table->integer('server_id');
-                }
-            );
-        }
+        create_user_table();
 
         $url = $params['serverhostname'].'/api/users/'.$params['clientsdetails']['email'].'?fields=id';
         $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
@@ -274,51 +297,23 @@ function pterodactyl_CreateAccount(array $params)
         //Now get the panel to create a new server for our new user.
         $new_server = array("name" => $server_name."_".$params['serviceid'],
                             "owner" => $params['clientsdetails']['email'], 
-                            "memory" => $params['configoption1'],
-                            "swap" => $params['configoption2'],
-                            "cpu" => $params['configoption3'],
-                            "io" => $params['configoption4'],
-                            "disk" => $params['configoption5'],
-                            "location_id" => $params['configoption6'],
-                            "service_id" => $params['configoption7'],
-                            "option_id" => $params['configoption8'],
-                            "pack_id" => $params['configoption15'],
                             "auto_deploy" => $params['configoption10'] === 'on' ? true : false
                            );
 
         //Handle overiding of service ID, we need to handle this before grabbing the service
-        if(isset($params['configoptions']['service_id']))
-             $new_server['service_id'] = $params['configoptions']['service_id'];
-        else if(isset($params['customfields']['service_id']))
-             $new_server['service_id'] = $params['customfields']['service_id'];
+        $new_server['service_id'] = handle_overide($params, 'service_id', 'configoption7');
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$new_server['service_id'], 'GET');      
         
-        if (isset($params['configoptions']['pack_id']))
-            $new_server['pack_id'] = $params['configoptions']['pack_id'];
-        else if (isset($params['customfields']['pack_id']))
-            $new_server['pack_id'] = $params['customfields']['pack_id'];     
-        
-        if (isset($params['configoptions']['startup']))
-            $new_server['startup'] = $params['configoptions']['startup'];
-        else if (isset($params['customfields']['startup']))
-            $new_server['startup'] = $params['customfields']['startup'];     
-        else if (isset($params['configoption9']))
-            $new_server['startup'] = $params['configoption9'];
-        else
-            $new_server['startup'] = $service['data']->startup;
-        
-        //Handle overiding location ID
-        if (isset($params['configoptions']['location_id']))
-             $new_server['location_id'] = $params['configoptions']['location_id'];
-        else if (isset($params['customfields']['location_id']))
-             $new_server['location_id'] = $params['customfields']['location_id'];      
-
-        //Handle overiding of option id
-        if(isset($params['configoptions']['option_id']))
-            $new_server['option_id'] = $params['configoptions']['option_id'];
-        else if(isset($params['customfields']['option_id']))
-            $new_server['option_id'] = $params['customfields']['option_id'];            
+        $new_server['memory']      = handle_overide($params, 'memory',      'configoption1' );
+        $new_server['swap']        = handle_overide($params, 'swap',        'configoption2' );
+        $new_server['cpu']         = handle_overide($params, 'cpu',         'configoption3' );
+        $new_server['io']          = handle_overide($params, 'io',          'configoption4' );
+        $new_server['disk']        = handle_overide($params, 'disk',        'configoption5' );
+        $new_server['pack_id']     = handle_overide($params, 'pack_id',     'configoption15');
+        $new_server['location_id'] = handle_overide($params, 'location_id', 'configoption6' );
+        $new_server['option_id']   = handle_overide($params, 'option_id',   'configoption8' );
+        $new_server['startup']     = handle_overide($params, 'startup',     'configoption9', $service['data']->startup);
         
         //We need to loop through every option to handle environment variables for our specified option
         foreach($service['data']->options as $option)
@@ -327,41 +322,17 @@ function pterodactyl_CreateAccount(array $params)
             {
                 foreach($option->variables as $variable)
                 {
-                    //Handle overding of any enviornment variables, also feed in all default values
-                    if(isset($params['configoptions'][$variable->env_variable]))
-                        $env_varaiable = $params['configoptions'][$variable->env_variable];
-                    else if(isset($params['customfields'][$variable->env_variable]))
-                        $env_varaiable = $params['customfields'][$variable->env_variable];
-
-                    $new_server["env_".$variable->env_variable] = isset($env_varaiable) ? $env_varaiable : $variable->default_value;
-                    
-                    $env_varaiable = NULL;
+                    $new_server["env_".$variable->env_variable] = handle_overide($params, $variable->env_variable, NULL, $variable->default_value);
                 }
                 break;
             }
         }
 
         //If auto deploy is enabled, we need additional information
-        if ($params['configoption10'] === 'off')
+        if (!$new_server['auto_deploy'])
         {
-            //Handle overiding of the base node ID
-            if(isset($params['configoptions']['node_id']))
-                $new_server['node_id'] = $params['configoptions']['node_id'];
-            else if(isset($params['customfields']['node_id']))
-                $new_server['node_id'] = $params['customfields']['node_id'];
-            else
-                $new_server["node_id"] = $params['configoption11'];
-            
-            //Check if we are assigning to a specific allocation or require an IP and port to be supplied
-            if(!isset($params['configoption12']))
-            {
-                $new_server["allocation"] = $params['configoption12']; 
-            }
-            else
-            {
-                $new_server["ip"] = $params['configoption13'];
-                $new_server["port"] = $params['configoption14'];
-            }
+            $new_server['node_id']       = handle_overide($params, 'node_id',       'configoption11');
+            $new_server["allocation_id"] = handle_overide($params, 'allocation_id', 'configoption12'); 
         }
 
         $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers', 'POST', $new_server);      
@@ -441,6 +412,7 @@ function pterodactyl_CreateAccount(array $params)
 
         $email["id"] = $params['serviceid'];
         localAPI("sendemail", $email, $adminid[0]);
+        
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
