@@ -166,18 +166,6 @@ function pterodactyl_ConfigOptions()
             'Default' => '',
             'Description' => 'The allocation ID to use for the server (only if not using auto_deploy, and not using ip and port).',
         ),
-        'ip' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'IP address of existing allocation to assign to server.',
-        ),
-        'port' => array(
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => '',
-            'Description' => 'Port of existing allocation to assign to server. (Must include above IP address).',
-        ),
         'pack' => array (
             'Type' => 'text',
             'Size' => '25',
@@ -310,7 +298,7 @@ function pterodactyl_CreateAccount(array $params)
         $new_server['cpu']         = handle_overide($params, 'cpu',         'configoption3' );
         $new_server['io']          = handle_overide($params, 'io',          'configoption4' );
         $new_server['disk']        = handle_overide($params, 'disk',        'configoption5' );
-        $new_server['pack_id']     = handle_overide($params, 'pack_id',     'configoption15');
+        $new_server['pack_id']     = handle_overide($params, 'pack_id',     'configoption13');
         $new_server['location_id'] = handle_overide($params, 'location_id', 'configoption6' );
         $new_server['option_id']   = handle_overide($params, 'option_id',   'configoption8' );
         $new_server['startup']     = handle_overide($params, 'startup',     'configoption9', $service['data']->startup);
