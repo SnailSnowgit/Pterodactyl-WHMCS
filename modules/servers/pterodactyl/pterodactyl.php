@@ -213,11 +213,11 @@ function generate_username()
 /**
  * Handle overiding of variables.
  */
-function handle_overide($params, $overide_variable, $config_option, $data = NULL)
+function handle_overide(array $params, $overide_variable, $config_option, $data = NULL)
 {
     if (isset($params['configoptions'][$overide_variable]))
         return $params['configoptions'][$overide_variable];
-    else if (isset($params['customfields']['startup']))
+    else if (isset($params['customfields'][$overide_variable]))
         return $params['customfields'][$overide_variable];     
     else if (isset($params[$config_option]))
         return $params[$config_option];
@@ -431,11 +431,11 @@ function pterodactyl_TestConnection(array $params)
         $url = $params['serverhostname'].'/api/nodes';
         $nodes = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
     
-        if($nodes['status_code'] != 200)
+        if ($nodes['status_code'] != 200)
         {
             $success = false;
             $errorMsg = 'Failed to connect to server, ensure your API keys are correct and your panel is running on a valid SSL Certificate. Failed with HTTP Status Code: ' + $nodes['status_code'];
-        }    
+        }
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
@@ -481,12 +481,11 @@ function pterodactyl_SuspendAccount(array $params)
         $client = pterodactyl_get_client($params['serviceid']);
         
         $url = $params['serverhostname'].'/api/servers/'.$client->server_id.'/suspend';
-
         $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST');
 
         if($response['status_code'] != 204)
         {
-            return $response['data']->message;
+            return $response['data']->message + " HTTP Status code: " + $response['status_code'] ;
         }
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
@@ -523,12 +522,11 @@ function pterodactyl_UnsuspendAccount(array $params)
         $client = pterodactyl_get_client($params['serviceid']);
         
         $url = $params['serverhostname'].'/api/servers/'.$client->server_id."/unsuspend";
-
         $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST');
 
         if($response['status_code'] != 204)
         {
-            return $response['data']->message;
+            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
         }
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
@@ -564,12 +562,11 @@ function pterodactyl_TerminateAccount(array $params)
         $client = pterodactyl_get_client($params['serviceid']);
         
         $url = $params['serverhostname'].'/api/servers/'.$client->server_id."/force";
-
         $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'DELETE', $data);
         
         if($response['status_code'] != 204)
         {
-            return $response['data']->message;
+            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
         }
         
         Capsule::table('tbl_pterodactylproduct')
@@ -621,7 +618,7 @@ function pterodactyl_ChangePassword(array $params)
         
         if($response['status_code'] != 200)
         {
-            return $response['data']->message;
+            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
         }
         
     } catch (Exception $e) {
@@ -675,7 +672,7 @@ function pterodactyl_ChangePackage(array $params)
 
         if($response['status_code'] != 200)
         {
-            return $response['data']->message;
+            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
         }       
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
@@ -754,8 +751,6 @@ function pterodactyl_AdminServicesTabFields(array $params)
  */
 function pterodactyl_ClientArea(array $params)
 {
-    // Determine the requested action and set service call parameters based on
-    // the action.
     $requestedAction = isset($_REQUEST['customAction']) ? $_REQUEST['customAction'] : '';
 
     $serviceAction = 'get_stats';
