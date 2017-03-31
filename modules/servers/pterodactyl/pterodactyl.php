@@ -23,11 +23,14 @@
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
- */
+ **/
 
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
+
+//Define the current version of this module
+$MODULE_VERSION = "1.0";
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 
@@ -46,6 +49,7 @@ function pterodactyl_api_call($publickey, $privatekey, $url, $type, array $data 
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $type);
     curl_setopt($curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+    curl_setopt($curl, CURLOPT_USERAGENT, "Pterodactyl WHMCS Plugin/". $MODULE_VERSION);
 
     if(isset($data))
     {
@@ -289,7 +293,7 @@ function pterodactyl_CreateAccount(array $params)
                            );
 
         //Handle overiding of service ID, we need to handle this before grabbing the service
-        $new_server['service_id'] = handle_overide($params, 'service_id', 'configoption7');
+        $new_server['service_id'] = handle_overide($params, 'service_id');
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$new_server['service_id'], 'GET');      
         
