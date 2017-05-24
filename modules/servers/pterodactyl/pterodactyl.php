@@ -30,7 +30,7 @@ if (!defined("WHMCS")) {
 }
 
 //Define the current version of this module
-$MODULE_VERSION = "1.0";
+$MODULE_VERSION = "1.1";
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 
@@ -64,10 +64,16 @@ function pterodactyl_api_call($publickey, $privatekey, $url, $type, array $data 
 
     curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 
-    $responsedata = array('data' => json_decode(curl_exec($curl)),
-                          'status_code' => curl_getinfo($curl, CURLINFO_HTTP_CODE));
+	$responsedata = json_decode(curl_exec($curl), true);
+	$responsedata['status_code'] = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
     curl_close($curl);
+
+    logModuleCall(
+        'pterodactylWHMCS',
+        __FUNCTION__,
+        print_r($responsedata, true)
+    );
 
     return $responsedata;
 }
@@ -252,19 +258,25 @@ function pterodactyl_CreateAccount(array $params)
         
         create_user_table();
 
-        $url = $params['serverhostname'].'/api/users/'.$params['clientsdetails']['email'].'?fields=id';
-        $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
+      //  $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'.$params['clientsdetails']['email'], 'GET', $data);
+      $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users', 'GET', $data);
 
-        if($users['status_code'] == 200)
+        foreach($users['data'] as $user)
         {
-            $user_id = $users['data']->id;
+            if ($user['attributes']['email'] !== $params['clientsdetails']['email'])
+				continue;
+
+            $user_id = $user['id'];
         }
+
+        /*if($users['status_code'] == 200)
+        {
+            $user_id = $users['data']['id'];
+        }*/
        
         if(!isset($user_id))
         {
             //Begin by creating the user on the panel side
-            $url = $params['serverhostname'].'/api/users';
-
             $data = array("email" => $params['clientsdetails']['email'],
                           "username" => generate_username(),
                           "name_first" => $params['clientsdetails']['firstname'],
@@ -273,14 +285,14 @@ function pterodactyl_CreateAccount(array $params)
                           "password" => $params['password']
                          );
 
-            $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST', $data);
+            $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users', 'POST', $data);
 
             if($response['status_code'] != 200)
             {
-                return "Error during create account: ".$response['data']->message + " Status Code: ".$response['status_code'];
+                return "Error during create account: Response: ".$response['error'] + " Status Code: ".$response['status_code'];
             }
             
-            $user_id = $response['data']->id;
+            $user_id = $response['data']['id'];
             $newAccount = true;
         }
         
@@ -288,14 +300,14 @@ function pterodactyl_CreateAccount(array $params)
         
         //Now get the panel to create a new server for our new user.
         $new_server = array("name" => $server_name."_".$params['serviceid'],
-                            "owner" => $params['clientsdetails']['email'], 
+                            "user_id" => $user_id, 
                             "auto_deploy" => $params['configoption10'] === 'on' ? true : false
                            );
 
         //Handle overiding of service ID, we need to handle this before grabbing the service
         $new_server['service_id'] = handle_overide($params, 'service_id');
 
-        $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/services/'.$new_server['service_id'], 'GET');      
+        $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/services/'.$new_server['service_id'].'?include=options.variables', 'GET');      
         
         $new_server['memory']      = handle_overide($params, 'memory',      'configoption1' );
         $new_server['swap']        = handle_overide($params, 'swap',        'configoption2' );
@@ -305,18 +317,17 @@ function pterodactyl_CreateAccount(array $params)
         $new_server['pack_id']     = handle_overide($params, 'pack_id',     'configoption13');
         $new_server['location_id'] = handle_overide($params, 'location_id', 'configoption6' );
         $new_server['option_id']   = handle_overide($params, 'option_id',   'configoption8' );
-        $new_server['startup']     = handle_overide($params, 'startup',     'configoption9', $service['data']->startup);
+        $new_server['startup']     = handle_overide($params, 'startup',     'configoption9', $service['data']['attributes']['startup']);
         
         //We need to loop through every option to handle environment variables for our specified option
-        foreach($service['data']->options as $option)
+        foreach($service['included'] as $option)
         {
-            if ($new_server['option_id'] == $option->id)
+            if ($option['type'] !== 'variable')
+				continue;
+
+            if ($new_server['option_id'] === $option['attributes']['option_id'])
             {
-                foreach($option->variables as $variable)
-                {
-                    $new_server["env_".$variable->env_variable] = handle_overide($params, $variable->env_variable, NULL, $variable->default_value);
-                }
-                break;
+                $new_server["env_".$option['attributes']['env_variable']] = handle_overide($params, $option['attributes']['env_variable'], NULL, $option['attributes']['default_value']);
             }
         }
 
@@ -327,14 +338,14 @@ function pterodactyl_CreateAccount(array $params)
             $new_server["allocation_id"] = handle_overide($params, 'allocation_id', 'configoption12'); 
         }
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers', 'POST', $new_server);      
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers', 'POST', $new_server);      
 
         if($response['status_code'] != 200)
         {
-            return "Error during create server: ".$response['data']->message + " Status Code: ".$response['status_code'];
+            return "Error during create server: Response Message: ".$response['error'] + " Status Code: ".$response['status_code'];
         }
         
-        $server_id = $response['data']->id;
+        $server_id = $response['data']['id'];
 
         Capsule::table('tbl_pterodactylproduct')->insert(
                 ['client_id' => $params['userid'],'service_id' => $params['serviceid'], 'user_id' => $user_id,'server_id' => $server_id]
@@ -384,16 +395,14 @@ function pterodactyl_CreateAccount(array $params)
             $email["custommessage"] .= "<b>Panel Login Password:</b> Use pre-existing password. <br /><br />";
         }
 
-        //Make a call to Pterodactyl to grab all allocations for the new server
-        $url = $params['serverhostname'].'/api/nodes/allocations/'. $params['serviceid'];
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $params['serviceid'].'?include=allocations', 'GET');
 
-        foreach($response['data']->allocations as $allocation)
+        foreach($response['included'] as $allocation)
         {
-            $email["custommessage"] .= "<b>Server IP:</b> ".$allocation->ip.":".$allocation->port."<br />";
-            if(isset($allocation->ip_alias))
+            $email["custommessage"] .= "<b>Server IP:</b> ".$allocation['attributes']['ip'].":".$allocation['attributes']['port']."<br />";
+            if(isset($allocation['attributes']['ip_alias']))
             {
-                $email["custommessage"] .= "<b>Server Alias:</b> ".$allocation->ip_alias.":".$allocation->port."<br />";
+                $email["custommessage"] .= "<b>Server Alias:</b> ".$allocation['attributes']['ip_alias'].":".$allocation['attributes']['port']."<br />";
             }
         }
 
@@ -408,7 +417,7 @@ function pterodactyl_CreateAccount(array $params)
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -432,18 +441,24 @@ function pterodactyl_TestConnection(array $params)
         $success = true;
         $errorMsg = '';
 
-        $url = $params['serverhostname'].'/api/nodes';
-        $nodes = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET', $data);
+        $nodes = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/nodes', 'GET', $data);
     
         if ($nodes['status_code'] != 200)
         {
             $success = false;
             $errorMsg = 'Failed to connect to server, ensure your API keys are correct and your panel is running on a valid SSL Certificate. Failed with HTTP Status Code: ' + $nodes['status_code'];
         }
+        
+        if ($nodes['meta']['pagination']['count'] <= 0)
+        {
+            $success = false;
+            $errorMsg = 'No Nodes available, please setup a node before proceeding, otherwise this module will fail to work correctly.';
+        }
+
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -484,17 +499,16 @@ function pterodactyl_SuspendAccount(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $url = $params['serverhostname'].'/api/servers/'.$client->server_id.'/suspend';
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'.$client->server_id.'/suspend', 'POST');
 
         if($response['status_code'] != 204)
         {
-            return $response['data']->message + " HTTP Status code: " + $response['status_code'] ;
+            return $response['error'] + " HTTP Status code: " + $response['status_code'] ;
         }
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -525,17 +539,16 @@ function pterodactyl_UnsuspendAccount(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $url = $params['serverhostname'].'/api/servers/'.$client->server_id."/unsuspend";
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'POST');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'.$client->server_id."/unsuspend", 'POST');
 
         if($response['status_code'] != 204)
         {
-            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
+            return $response['error'] + " HTTP Status code: " + $response['status_code'];
         }
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -565,12 +578,11 @@ function pterodactyl_TerminateAccount(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $url = $params['serverhostname'].'/api/servers/'.$client->server_id."/force";
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'DELETE', $data);
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers/'.$client->server_id."/force", 'DELETE');
         
         if($response['status_code'] != 204)
         {
-            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
+            return $response['error'] + " HTTP Status code: " + $response['status_code'];
         }
         
         Capsule::table('tbl_pterodactylproduct')
@@ -580,7 +592,7 @@ function pterodactyl_TerminateAccount(array $params)
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -614,21 +626,19 @@ function pterodactyl_ChangePassword(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $url = $params['serverhostname'].'/api/users/'. $client->user_id;
-        
         $data = array("password" => $params['password'] );
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'PATCH', $data);
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'. $client->user_id, 'PATCH', $data);
         
         if($response['status_code'] != 200)
         {
-            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
+            return $response['error'] + " HTTP Status code: " + $response['status_code'];
         }
         
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -663,8 +673,6 @@ function pterodactyl_ChangePackage(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
 
-        $url = $params['serverhostname'].'/api/servers/'. $client->server_id.'/build';
-
         $data = array("memory" => $params['configoption1'],
                       "swap" => $params['configoption2'],
                       "cpu" => $params['configoption3'],
@@ -672,16 +680,16 @@ function pterodactyl_ChangePackage(array $params)
                       "disk" => $params['configoption5'],
                      );
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'PATCH', $data);
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $client->server_id.'/build', 'PATCH', $data);
 
         if($response['status_code'] != 200)
         {
-            return $response['data']->message + " HTTP Status code: " + $response['status_code'];
+            return $response['error'] + " HTTP Status code: " + $response['status_code'];
         }       
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -726,7 +734,7 @@ function pterodactyl_AdminServicesTabFields(array $params)
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
@@ -760,21 +768,21 @@ function pterodactyl_ClientArea(array $params)
     $serviceAction = 'get_stats';
     $templateFile = 'templates/overview.tpl';
 
-    try {
-        $response = array();
-        
+    try {      
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $url = $params['serverhostname'].'/api/nodes/allocations/'. $client->server_id;
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $client->server_id . '?include=allocations', 'GET');
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $url, 'GET');
+        $serverip['ip'] = '';
+	    $serverip['ip_alias'] = '';
 
-        foreach($response['data']->allocations as $allocation)
+        foreach($response['included'] as $allocation)
         {
-            $serverip['ip'][] = $allocation->ip.":".$allocation->port;
-            if(isset($allocation->ip_alias))
+            
+            $serverip['ip'][] .= $allocation['attributes']['ip'].":".$allocation['attributes']['port'] .", ";
+            if(isset($allocation['attributes']['ip_alias']))
             {
-                $serverip['ip_alias'][] = $allocation->ip_alias.":".$allocation->port;
+                $serverip['ip_alias'] .= $allocation['attributes']['ip_alias'].":".$allocation['attributes']['port'] .", ";
             }
         }
 
@@ -795,7 +803,7 @@ function pterodactyl_ClientArea(array $params)
     } catch (Exception $e) {
         // Record the error in WHMCS's module log.
         logModuleCall(
-            'provisioningmodule',
+            'pterodactylWHMCS',
             __FUNCTION__,
             $params,
             $e->getMessage(),
