@@ -122,13 +122,9 @@
 							</div>
 							<div class="col-md-6">
 								<h4>Memory: </h4> 
-								{$memory}
-								<h4>Swap: </h4> 
-								{$swap}
+								{$memory}}
 								<h4>Hard Drive Space: </h4> 
 								{$disk}
-								<h4>CPU Allowance: </h4> 
-								{$cpu}
 							</div>
 						<div>
 					</div>

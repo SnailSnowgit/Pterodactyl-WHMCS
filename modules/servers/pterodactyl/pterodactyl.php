@@ -259,8 +259,8 @@ function pterodactyl_CreateAccount(array $params)
         
         create_user_table();
 
-      //  $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'.$params['clientsdetails']['email'], 'GET', $data);
-      $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users', 'GET', $data);
+         //  $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'.$params['clientsdetails']['email'], 'GET', $data);
+        $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users', 'GET', $data);
 
         foreach($users['data'] as $user)
         {
@@ -325,7 +325,6 @@ function pterodactyl_CreateAccount(array $params)
         {
             if ($option['type'] !== 'variable')
 				continue;
-
             if ($new_server['option_id'] === $option['attributes']['option_id'])
             {
                 $new_server["env_".$option['attributes']['env_variable']] = handle_overide($params, $option['attributes']['env_variable'], NULL, $option['attributes']['default_value']);
@@ -792,9 +791,6 @@ function pterodactyl_ClientArea(array $params)
             'templateVariables' => array(
                 'panelhostname' => $params['serverhostname'],
                 'memory' => $params['configoption1']."mb",
-                'swap' => $params['configoption2']."mb",
-                'cpu' => $params['configoption3']."%",
-                'io' => $params['configoption4'],
                 'disk' => $params['configoption5']."mb",
                 'email' => $params['clientsdetails']['email'],
                 'server_ip' =>  $serverip['ip'],
