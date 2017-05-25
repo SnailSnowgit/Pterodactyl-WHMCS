@@ -306,7 +306,7 @@ function pterodactyl_CreateAccount(array $params)
                            );
 
         //Handle overiding of service ID, we need to handle this before grabbing the service
-        $new_server['service_id'] = handle_overide($params, 'service_id');
+        $new_server['service_id'] = handle_overide($params, 'service_id', 'configoption7');
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/services/'.$new_server['service_id'].'?include=options.variables', 'GET');      
         
