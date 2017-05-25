@@ -396,7 +396,7 @@ function pterodactyl_CreateAccount(array $params)
             $email["custommessage"] .= "<b>Panel Login Password:</b> Use pre-existing password. <br /><br />";
         }
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $params['serviceid'].'?include=allocations', 'GET');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $new_server['service_id'].'?include=allocations', 'GET');
 
         foreach($response['included'] as $allocation)
         {
