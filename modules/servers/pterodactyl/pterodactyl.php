@@ -71,7 +71,8 @@ function pterodactyl_api_call($publickey, $privatekey, $url, $type, array $data 
 
     logModuleCall(
         'pterodactylWHMCS',
-        __FUNCTION__,
+        $url,
+        isset($data) ? print_r($data, true) : '',
         print_r($responsedata, true)
     );
 
