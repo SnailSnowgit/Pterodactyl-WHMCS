@@ -177,7 +177,7 @@ function pterodactyl_ConfigOptions()
             'Default' => '',
             'Description' => 'The allocation ID to use for the server (only if not using auto_deploy, and not using ip and port).',
         ),
-        'pack' => array (
+        'pack' => array(
             'Type' => 'text',
             'Size' => '25',
             'Default' => '0',
@@ -226,11 +226,11 @@ function generate_username()
  */
 function handle_overide(array $params, $overide_variable, $config_option, $data = NULL)
 {
-    if (isset($params['configoptions'][$overide_variable]))
+    if (isset($params['configoptions'][$overide_variable]) && $params['configoptions'][$overide_variable] != "")
         return $params['configoptions'][$overide_variable];
-    else if (isset($params['customfields'][$overide_variable]))
-        return $params['customfields'][$overide_variable];     
-    else if (isset($params[$config_option]))
+    else if (isset($params['customfields'][$overide_variable]) && $params['customfields'][$overide_variable] != "")
+        return $params['customfields'][$overide_variable];
+    else if (isset($params[$config_option]) && $params[$config_option] != "")
         return $params[$config_option];
     else 
         return $data;
@@ -319,13 +319,15 @@ function pterodactyl_CreateAccount(array $params)
         $new_server['location_id'] = handle_overide($params, 'location_id', 'configoption6' );
         $new_server['option_id']   = handle_overide($params, 'option_id',   'configoption8' );
         $new_server['startup']     = handle_overide($params, 'startup',     'configoption9', $service['data']['attributes']['startup']);
-        
+
         //We need to loop through every option to handle environment variables for our specified option
         foreach($service['included'] as $option)
         {
+            
             if ($option['type'] !== 'variable')
 				continue;
-            if ($new_server['option_id'] === $option['attributes']['option_id'])
+
+            if ($new_server['option_id'] == $option['attributes']['option_id'])
             {
                 $new_server["env_".$option['attributes']['env_variable']] = handle_overide($params, $option['attributes']['env_variable'], NULL, $option['attributes']['default_value']);
             }
