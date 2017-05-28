@@ -122,7 +122,7 @@
 							</div>
 							<div class="col-md-6">
 								<h4>Memory: </h4> 
-								{$memory}}
+								{$memory}
 								<h4>Hard Drive Space: </h4> 
 								{$disk}
 							</div>
