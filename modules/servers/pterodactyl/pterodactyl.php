@@ -183,6 +183,12 @@ function pterodactyl_ConfigOptions()
             'Default' => '0',
             'Description' => 'Pack ID number, leave as 0 if you dont want to utilize it.',
          ),
+        'description' => array(
+            'Type' => 'text',
+            'Size' => '100',
+            'Default' => '{{servicename}} server for user {{userid}}',
+            'Description' => 'Description to be used for server creation.',
+        )
     );
 }
 
@@ -310,6 +316,9 @@ function pterodactyl_CreateAccount(array $params)
 
         $service = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/services/'.$new_server['service_id'].'?include=options.variables', 'GET');      
         
+        $replaceableFields = array('{{servicename}}', '{{userid}}');
+        $dataToReplaceWith = array($service['data']['attributes']['name'], $user_id);
+
         $new_server['memory']      = handle_overide($params, 'memory',      'configoption1' );
         $new_server['swap']        = handle_overide($params, 'swap',        'configoption2' );
         $new_server['cpu']         = handle_overide($params, 'cpu',         'configoption3' );
@@ -319,6 +328,7 @@ function pterodactyl_CreateAccount(array $params)
         $new_server['location_id'] = handle_overide($params, 'location_id', 'configoption6' );
         $new_server['option_id']   = handle_overide($params, 'option_id',   'configoption8' );
         $new_server['startup']     = handle_overide($params, 'startup',     'configoption9', $service['data']['attributes']['startup']);
+        $new_server['description']  = str_replace($replaceableFields, $dataToReplaceWith, $params['configoption14']);
 
         //We need to loop through every option to handle environment variables for our specified option
         foreach($service['included'] as $option)
@@ -340,7 +350,7 @@ function pterodactyl_CreateAccount(array $params)
             $new_server["allocation_id"] = handle_overide($params, 'allocation_id', 'configoption12'); 
         }
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers', 'POST', $new_server);      
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers?include=allocations', 'POST', $new_server);      
 
         if($response['status_code'] != 200)
         {
@@ -396,8 +406,6 @@ function pterodactyl_CreateAccount(array $params)
         {
             $email["custommessage"] .= "<b>Panel Login Password:</b> Use pre-existing password. <br /><br />";
         }
-
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $new_server['service_id'].'?include=allocations', 'GET');
 
         foreach($response['included'] as $allocation)
         {
