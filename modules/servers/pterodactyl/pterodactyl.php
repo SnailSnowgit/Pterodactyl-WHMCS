@@ -509,7 +509,7 @@ function pterodactyl_SuspendAccount(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'.$client->server_id.'/suspend', 'POST');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'.$client->server_id.'/suspend?action=suspend', 'PATCH');
 
         if($response['status_code'] != 204)
         {
@@ -549,7 +549,7 @@ function pterodactyl_UnsuspendAccount(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'.$client->server_id."/unsuspend", 'POST');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'.$client->server_id."/suspend?action=unsuspend", 'PATCH');
 
         if($response['status_code'] != 204)
         {
@@ -638,7 +638,7 @@ function pterodactyl_ChangePassword(array $params)
         
         $data = array("password" => $params['password'] );
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'. $client->user_id, 'PATCH', $data);
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'. $client->user_id, 'PUT', $data);
         
         if($response['status_code'] != 200)
         {
@@ -690,7 +690,7 @@ function pterodactyl_ChangePackage(array $params)
                       "disk" => $params['configoption5'],
                      );
 
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $client->server_id.'/build', 'PATCH', $data);
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/servers/'. $client->server_id.'/build', 'PUT', $data);
 
         if($response['status_code'] != 200)
         {
