@@ -64,8 +64,20 @@ function pterodactyl_api_call($publickey, $privatekey, $url, $type, array $data 
 
     curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
 
-	$responsedata = json_decode(curl_exec($curl), true);
-	$responsedata['status_code'] = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    $curldata = curl_exec($curl);
+
+    if($curldata == false)
+    {
+        logModuleCall(
+            'pterodactylWHMCS',
+            'CURL ERROR',
+            curl_error($curl),
+            ''
+        );
+    }
+
+    $responsedata = json_decode($curldata, true);
+    $responsedata['status_code'] = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
     curl_close($curl);
 
@@ -265,21 +277,28 @@ function pterodactyl_CreateAccount(array $params)
         
         create_user_table();
 
-         //  $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users/'.$params['clientsdetails']['email'], 'GET', $data);
-        $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users', 'GET', $data);
-
-        foreach($users['data'] as $user)
+        $searching = true;
+	    $current_page = 1;
+        while($searching)
         {
-            if ($user['attributes']['email'] !== $params['clientsdetails']['email'])
-				continue;
+            $users = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/admin/users?page=' . $current_page, 'GET');
+            foreach($users['data'] as $user)
+            {
+                if ($user['attributes']['email'] !== $params['clientsdetails']['email'])
+                    continue;
 
-            $user_id = $user['id'];
+                $user_id = $user['id'];
+                $searching = false;
+                break;
+            }
+
+            if($current_page == $users['meta']['pagination']['total_pages'])
+            {
+                $searching = false;
+            } else {
+                $current_page++;
+            }
         }
-
-        /*if($users['status_code'] == 200)
-        {
-            $user_id = $users['data']['id'];
-        }*/
        
         if(!isset($user_id))
         {
