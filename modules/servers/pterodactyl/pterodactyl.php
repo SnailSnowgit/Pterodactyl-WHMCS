@@ -607,7 +607,7 @@ function pterodactyl_TerminateAccount(array $params)
     try {
         $client = pterodactyl_get_client($params['serviceid']);
         
-        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers/'.$client->server_id."/force", 'DELETE');
+        $response = pterodactyl_api_call($params['serverusername'], $params['serverpassword'], $params['serverhostname'].'/api/servers/'.$client->server_id, 'DELETE');
         
         if($response['status_code'] != 204)
         {
